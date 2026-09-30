@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="PatentLens — Intelligent Prior-Art Retrieval and Ranking System using TF-IDF, Vector Space Model, and Weighted Zone Scoring.">
+    <title>PatentLens — Prior-Art Search Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- ─── Top Navigation ─────────────────────────────────────── -->
+    <nav class="nav">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                </svg>
+                <span>PatentLens</span>
+            </div>
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="search">Search</button>
+                <button class="nav-tab" data-tab="evaluation">Evaluation</button>
+                <button class="nav-tab" data-tab="explorer">Index Explorer</button>
+                <button class="nav-tab" data-tab="about">How It Works</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══════════════ TAB: SEARCH ═══════════════════════════════ -->
+    <section class="tab-panel active" id="panel-search">
+        <div class="container">
+            <div class="hero">
+                <h1>Prior-Art Search</h1>
+                <p>Enter an invention description or draft claim. PatentLens retrieves and ranks the most relevant patents using <strong>TF-IDF</strong>, <strong>Cosine Similarity</strong>, and <strong>Weighted Zone Scoring</strong>.</p>
+            </div>
+
+            <div class="search-card">
+                <textarea id="search-query" rows="4" placeholder="e.g. A method for adaptive beamforming in 5G networks using MIMO antenna arrays..."></textarea>
+
+                <div class="search-controls">
+                    <div class="filters">
+                        <select id="filter-cpc">
+                            <option value="">All CPC Classes</option>
+                            <option value="G06F">G06F — Computing</option>
+                            <option value="H04W">H04W — Wireless</option>
+                            <option value="G06N">G06N — AI / ML</option>
+                            <option value="H04L">H04L — Networking</option>
+                            <option value="A61B">A61B — Medical</option>
+                            <option value="B60W">B60W — Vehicles</option>
+                            <option value="G06T">G06T — Graphics</option>
+                        </select>
+                        <input type="number" id="filter-topk" value="20" min="1" max="100" title="Top-K results">
+                    </div>
+                    <button id="search-btn" class="btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                        Search
+                    </button>
+                </div>
+            </div>
+
+            <!-- Zone Weight Sliders -->
+            <details class="weight-panel">
+                <summary>Zone Weights (click to customize)</summary>
+                <div class="weight-sliders">
+                    <label>Claims <span id="w-claims-val">0.40</span>
+                        <input type="range" id="w-claims" min="0" max="1" step="0.05" value="0.40">
+                    </label>
+                    <label>Title <span id="w-title-val">0.30</span>
+                        <input type="range" id="w-title" min="0" max="1" step="0.05" value="0.30">
+                    </label>
+                    <label>Abstract <span id="w-abstract-val">0.20</span>
+                        <input type="range" id="w-abstract" min="0" max="1" step="0.05" value="0.20">
+                    </label>
+                    <label>Description <span id="w-description-val">0.10</span>
+                        <input type="range" id="w-description" min="0" max="1" step="0.05" value="0.10">
+                    </label>
+                </div>
+            </details>
+
+            <div class="loading" id="loading" style="display:none">
+                <div class="spinner"></div>
+                <p>Scoring patent corpus…</p>
+            </div>
+
+            <div id="search-results" style="display:none">
+                <div class="results-bar">
+                    <h2 id="results-heading">Results</h2>
+                    <span class="tag" id="results-meta"></span>
+                </div>
+                <div id="results-list"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════ TAB: EVALUATION ═══════════════════════════ -->
+    <section class="tab-panel" id="panel-evaluation">
+        <div class="container">
+            <div class="hero">
+                <h1>Evaluation Dashboard</h1>
+                <p>Run the full IR evaluation harness against a labeled query set using citation-based ground truth. Computes <strong>Precision@K</strong>, <strong>Recall@K</strong>, <strong>F1@K</strong>, and <strong>Mean Average Precision (MAP)</strong>.</p>
+            </div>
+            <button id="run-eval-btn" class="btn-primary btn-lg">Run Evaluation</button>
+            <div class="loading" id="eval-loading" style="display:none">
+                <div class="spinner"></div>
+                <p>Running evaluation across all queries…</p>
+            </div>
+            <div id="eval-results" style="display:none"></div>
+        </div>
+    </section>
+
+    <!-- ═══════════════ TAB: INDEX EXPLORER ════════════════════════ -->
+    <section class="tab-panel" id="panel-explorer">
+        <div class="container">
+            <div class="hero">
+                <h1>Index Explorer</h1>
+                <p>Inspect the inverted index — corpus statistics, vocabulary sizes per zone, and CPC class distribution.</p>
+            </div>
+            <div class="loading" id="stats-loading">
+                <div class="spinner"></div>
+                <p>Fetching index statistics…</p>
+            </div>
+            <div id="stats-content" style="display:none"></div>
+        </div>
+    </section>
+
+    <!-- ═══════════════ TAB: HOW IT WORKS ══════════════════════════ -->
+    <section class="tab-panel" id="panel-about">
+        <div class="container">
+            <div class="hero">
+                <h1>How PatentLens Works</h1>
+                <p>A step-by-step explanation of the IR pipeline, mapped to the CSDC7023 syllabus.</p>
+            </div>
+
+            <div class="explanation-grid">
+                <div class="explain-card">
+                    <div class="explain-num">1</div>
+                    <h3>Corpus Ingestion</h3>
+                    <p class="explain-module">Module 1 — Introduction to IR</p>
+                    <p>Raw patent documents (JSON) are parsed into structured <strong>zones</strong>: Title, Abstract, Claims, and Description. Each zone carries different semantic weight — claims are the legal core of a patent, while descriptions provide supporting detail.</p>
+                </div>
+
+                <div class="explain-card">
+                    <div class="explain-num">2</div>
+                    <h3>Text Preprocessing</h3>
+                    <p class="explain-module">Module 3 — Query Operations</p>
+                    <p>Each zone's text is <strong>tokenized</strong>, converted to lowercase, stripped of <strong>stopwords</strong> (common English words like "the", "and"), and then <strong>stemmed</strong> using the Porter Stemmer to reduce words to their root form (e.g., "processing" → "process").</p>
+                </div>
+
+                <div class="explain-card">
+                    <div class="explain-num">3</div>
+                    <h3>Inverted Index</h3>
+                    <p class="explain-module">Module 4 — Indexing & Scoring</p>
+                    <p>A <strong>per-zone inverted index</strong> is built: for each stemmed term in each zone, we store a postings list mapping document IDs to their term frequencies. This enables sub-second lookup of all documents containing any query term.</p>
+                </div>
+
+                <div class="explain-card">
+                    <div class="explain-num">4</div>
+                    <h3>TF-IDF Weighting</h3>
+                    <p class="explain-module">Module 4 — Indexing & Scoring</p>
+                    <p>Term importance is computed as <code>w(t,d) = (1 + log₁₀(tf)) × log₁₀(N / df)</code>. Terms that appear frequently in a document (high TF) but rarely across the corpus (high IDF) receive the highest weights. Document vector lengths are precomputed for normalization.</p>
+                </div>
+
+                <div class="explain-card">
+                    <div class="explain-num">5</div>
+                    <h3>Vector Space Model & Cosine Similarity</h3>
+                    <p class="explain-module">Module 4 — Indexing & Scoring</p>
+                    <p>Both the query and each document are represented as TF-IDF weighted vectors. The <strong>cosine similarity</strong> between them measures relevance: <code>cos(θ) = (q⃗ · d⃗) / (|q⃗| × |d⃗|)</code>. This is computed independently per zone.</p>
+                </div>
+
+                <div class="explain-card">
+                    <div class="explain-num">6</div>
+                    <h3>Weighted Zone Scoring</h3>
+                    <p class="explain-module">Module 4 — Weighted Zone Scoring</p>
+                    <p>Per-zone cosine scores are combined with configurable weights: <code>score = w₁·sim(claims) + w₂·sim(title) + w₃·sim(abstract) + w₄·sim(description)</code>. Default: Claims 0.4, Title 0.3, Abstract 0.2, Description 0.1 — reflecting the legal importance hierarchy of patent sections.</p>
+                </div>
+
+                <div class="explain-card">
+                    <div class="explain-num">7</div>
+                    <h3>Top-K Ranking & Boolean Filtering</h3>
+                    <p class="explain-module">Module 3 & 4 — Queries & Scoring</p>
+                    <p>Documents are ranked by their final weighted score and the <strong>Top-K</strong> are returned. Optional <strong>Boolean pre-filters</strong> on CPC class and date range narrow the candidate set before ranking (structured query support from Module 3).</p>
+                </div>
+
+                <div class="explain-card">
+                    <div class="explain-num">8</div>
+                    <h3>Evaluation Metrics</h3>
+                    <p class="explain-module">Module 5 — Evaluation of IR Systems</p>
+                    <p>Retrieval quality is measured using standard IR metrics: <strong>Precision@K</strong> (fraction of top-K that are relevant), <strong>Recall@K</strong> (fraction of relevant found in top-K), <strong>F1@K</strong>, and <strong>Mean Average Precision (MAP)</strong> across the full query set. Patent citation graphs serve as ground truth.</p>
+                </div>
+            </div>
+
+            <div class="architecture-card">
+                <h3>System Architecture</h3>
+                <pre class="arch-diagram">
+Patent Corpus (JSON)
+     │
+     ▼
+[1] Parser → Zone Extractor (title / abstract / claims / description / metadata)
+     │
+     ▼
+[2] Preprocessor (tokenize → stopword removal → Porter stemming) per zone
+     │
+     ▼
+[3] Inverted Index Builder (per-zone postings + document frequency)
+     │
+     ▼
+[4] TF-IDF Weight Computation ──► [5] Zone Weight Aggregator
+     │
+     ▼
+Query ──► [6] Query Parser (free text + optional Boolean filters)
+     │             │
+     │             ▼
+     │      [7] Query Expansion (Rocchio relevance feedback)
+     ▼
+[8] Vector Space Scoring (cosine similarity, weighted zones) ──► Top-K Ranker
+     │
+     ▼
+[9] Results UI (ranked list, score breakdown, zone matches, filters)
+     │
+     ▼
+[10] Evaluation Module (Precision / Recall / F1 / MAP against labeled set)
+                </pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════ Patent Detail Modal ════════════════════════ -->
+    <div class="modal-overlay" id="patent-modal" style="display:none">
+        <div class="modal-card">
+            <button class="modal-close" id="modal-close-btn">&times;</button>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
